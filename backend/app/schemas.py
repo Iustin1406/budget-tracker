@@ -25,3 +25,30 @@ class ExpenseResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class StatsByCategoryResponse(BaseModel):
+    category: str
+    total: float
+
+
+class StatsByMonthResponse(BaseModel):
+    year: int
+    month: int
+    total: float
+
+
+class StatsByDayResponse(BaseModel):
+    date: date
+    total: float
+
+
+class StatsByYearResponse(BaseModel):
+    year: int
+    stats: list[StatsByCategoryResponse]
+
+
+class StatsByRangeResponse(BaseModel):
+    start_date: date
+    end_date: date
+    stats: list[StatsByCategoryResponse]
