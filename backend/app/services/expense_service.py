@@ -1,6 +1,17 @@
-from sqlalchemy import extract
+from sqlalchemy import extract, asc, desc
 
 from app.models import Expense
+
+SORT_COLUMNS = {
+    "date": Expense.date,
+    "amount": Expense.amount,
+    "category": Expense.category,
+}
+
+SORT_ORDERS = {
+    "asc": asc,
+    "desc": desc,
+}
 
 
 def create_expense(db, expense_data):
@@ -18,7 +29,7 @@ def create_expense(db, expense_data):
     return expense
 
 
-def get_expenses(db, category=None, date=None, month=None, year=None):
+def get_expenses(db, category=None, date=None, month=None, year=None, sort_by="date", sort_order="desc"):
     query = db.query(Expense)
 
     if category is not None:
@@ -33,7 +44,10 @@ def get_expenses(db, category=None, date=None, month=None, year=None):
     if year is not None:
         query = query.filter(extract("year", Expense.date) == year)
 
-    expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
+    column = SORT_COLUMNS.get(sort_by, Expense.date)
+    order_fn = SORT_ORDERS.get(sort_order, desc)
+
+    expenses = query.order_by(order_fn(column), Expense.id.desc()).all()
 
     return expenses
 

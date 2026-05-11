@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class FilterBar extends StatelessWidget {
   final String? selectedCategory;
@@ -10,6 +11,14 @@ class FilterBar extends StatelessWidget {
   final ValueChanged<int?> onYearChanged;
   final VoidCallback onClear;
 
+  final String? selectedSortBy;
+  final String? selectedSortOrder;
+  final ValueChanged<String?>? onSortByChanged;
+  final ValueChanged<String?>? onSortOrderChanged;
+
+  final DateTime? selectedDate;
+  final ValueChanged<DateTime?>? onDateChanged;
+
   const FilterBar({
     super.key,
     required this.selectedCategory,
@@ -20,12 +29,19 @@ class FilterBar extends StatelessWidget {
     required this.onMonthChanged,
     required this.onYearChanged,
     required this.onClear,
+    this.selectedSortBy,
+    this.selectedSortOrder,
+    this.onSortByChanged,
+    this.onSortOrderChanged,
+    this.selectedDate,
+    this.onDateChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     final months = List.generate(12, (index) => index + 1);
     final years = [2024, 2025, 2026, 2027];
+    final formatter = DateFormat('dd MMM yyyy');
 
     return Wrap(
       spacing: 12,
@@ -91,6 +107,57 @@ class FilterBar extends StatelessWidget {
             onChanged: onYearChanged,
           ),
         ),
+        if (onDateChanged != null)
+          SizedBox(
+            width: 180,
+            child: InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate ?? DateTime.now(),
+                  firstDate: DateTime(2024),
+                  lastDate: DateTime(2028),
+                );
+                onDateChanged!(picked);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Date'),
+                child: Text(
+                  selectedDate != null
+                      ? formatter.format(selectedDate!)
+                      : 'All',
+                ),
+              ),
+            ),
+          ),
+        if (onSortByChanged != null)
+          SizedBox(
+            width: 160,
+            child: DropdownButtonFormField<String>(
+              initialValue: selectedSortBy ?? 'date',
+              decoration: const InputDecoration(labelText: 'Sort by'),
+              items: const [
+                DropdownMenuItem(value: 'date', child: Text('Date')),
+                DropdownMenuItem(value: 'amount', child: Text('Amount')),
+                DropdownMenuItem(value: 'category', child: Text('Category')),
+              ],
+              onChanged: onSortByChanged,
+            ),
+          ),
+        if (onSortOrderChanged != null)
+          IconButton(
+            icon: Icon(
+              selectedSortOrder == 'asc'
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward,
+            ),
+            tooltip: selectedSortOrder == 'asc' ? 'Ascending' : 'Descending',
+            onPressed: () {
+              onSortOrderChanged!(
+                selectedSortOrder == 'asc' ? 'desc' : 'asc',
+              );
+            },
+          ),
         OutlinedButton(
           onPressed: onClear,
           child: const Text('Clear'),

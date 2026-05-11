@@ -51,3 +51,44 @@ class StatsByMonthModel {
     );
   }
 }
+
+class StatsByYearModel {
+  final int year;
+  final List<StatsByCategoryModel> stats;
+
+  StatsByYearModel({
+    required this.year,
+    required this.stats,
+  });
+
+  factory StatsByYearModel.fromJson(Map<String, dynamic> json) {
+    return StatsByYearModel(
+      year: json['year'],
+      stats: (json['stats'] as List)
+          .map((item) => StatsByCategoryModel.fromJson(item))
+          .toList(),
+    );
+  }
+}
+
+class StatsByRangeModel {
+  final DateTime startDate;
+  final DateTime endDate;
+  final List<StatsByCategoryModel> stats;
+
+  StatsByRangeModel({
+    required this.startDate,
+    required this.endDate,
+    required this.stats,
+  });
+
+  factory StatsByRangeModel.fromJson(Map<String, dynamic> json) {
+    return StatsByRangeModel(
+      startDate: DateTime.parse(json['start_date']),
+      endDate: DateTime.parse(json['end_date']),
+      stats: (json['stats'] as List)
+          .map((item) => StatsByCategoryModel.fromJson(item))
+          .toList(),
+    );
+  }
+}

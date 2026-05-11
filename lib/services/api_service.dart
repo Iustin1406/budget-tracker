@@ -35,6 +35,8 @@ class ApiService {
     int? month,
     int? year,
     String? date,
+    String? sortBy,
+    String? sortOrder,
   }) async {
     final queryParameters = <String, String>{};
 
@@ -52,6 +54,14 @@ class ApiService {
 
     if (date != null && date.isNotEmpty) {
       queryParameters['date'] = date;
+    }
+
+    if (sortBy != null && sortBy.isNotEmpty) {
+      queryParameters['sort_by'] = sortBy;
+    }
+
+    if (sortOrder != null && sortOrder.isNotEmpty) {
+      queryParameters['sort_order'] = sortOrder;
     }
 
     final uri = Uri.parse('${_baseUrl()}/expenses')
@@ -173,5 +183,49 @@ class ApiService {
 
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((item) => StatsByMonthModel.fromJson(item)).toList();
+  }
+
+  Future<StatsByYearModel> getStatsByYear({
+    int? year,
+  }) async {
+    final queryParameters = <String, String>{};
+
+    if (year != null) {
+      queryParameters['year'] = year.toString();
+    }
+
+    final uri = Uri.parse('${_baseUrl()}/stats/by-year')
+        .replace(queryParameters: queryParameters);
+
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load year stats');
+    }
+
+    final data = jsonDecode(response.body);
+    return StatsByYearModel.fromJson(data);
+  }
+
+  Future<StatsByRangeModel> getStatsByRange({
+    required String startDate,
+    required String endDate,
+  }) async {
+    final queryParameters = <String, String>{
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+
+    final uri = Uri.parse('${_baseUrl()}/stats/by-range')
+        .replace(queryParameters: queryParameters);
+
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load range stats');
+    }
+
+    final data = jsonDecode(response.body);
+    return StatsByRangeModel.fromJson(data);
   }
 }

@@ -29,14 +29,24 @@ def read_expenses(
     date: date_type = None,
     month: int = None,
     year: int = None,
+    sort_by: str = "date",
+    sort_order: str = "desc",
     db: Session = Depends(get_db)
 ):
+    if sort_by not in ("date", "amount", "category"):
+        raise HTTPException(status_code=400, detail="Invalid sort_by value")
+
+    if sort_order not in ("asc", "desc"):
+        raise HTTPException(status_code=400, detail="Invalid sort_order value")
+
     return get_expenses(
         db=db,
         category=category,
         date=date,
         month=month,
-        year=year
+        year=year,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
 

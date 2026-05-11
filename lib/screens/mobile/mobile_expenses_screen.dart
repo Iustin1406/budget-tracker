@@ -24,6 +24,9 @@ class _MobileExpensesScreenState extends State<MobileExpensesScreen> {
   String? _selectedCategory;
   int? _selectedMonth;
   int? _selectedYear;
+  DateTime? _selectedDate;
+  String _selectedSortBy = 'date';
+  String _selectedSortOrder = 'desc';
 
   bool _isLoading = true;
 
@@ -52,8 +55,13 @@ class _MobileExpensesScreenState extends State<MobileExpensesScreen> {
     try {
       expenses = await _apiService.getExpenses(
         category: _selectedCategory,
-        month: _selectedMonth,
-        year: _selectedYear,
+        month: _selectedDate != null ? null : _selectedMonth,
+        year: _selectedDate != null ? null : _selectedYear,
+        date: _selectedDate != null
+            ? '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}'
+            : null,
+        sortBy: _selectedSortBy,
+        sortOrder: _selectedSortOrder,
       );
     } catch (_) {}
 
@@ -113,6 +121,9 @@ class _MobileExpensesScreenState extends State<MobileExpensesScreen> {
                       selectedMonth: _selectedMonth,
                       selectedYear: _selectedYear,
                       categories: categoryNames,
+                      selectedDate: _selectedDate,
+                      selectedSortBy: _selectedSortBy,
+                      selectedSortOrder: _selectedSortOrder,
                       onCategoryChanged: (value) async {
                         setState(() {
                           _selectedCategory = value;
@@ -131,11 +142,32 @@ class _MobileExpensesScreenState extends State<MobileExpensesScreen> {
                         });
                         await _loadData();
                       },
+                      onDateChanged: (value) async {
+                        setState(() {
+                          _selectedDate = value;
+                        });
+                        await _loadData();
+                      },
+                      onSortByChanged: (value) async {
+                        setState(() {
+                          _selectedSortBy = value ?? 'date';
+                        });
+                        await _loadData();
+                      },
+                      onSortOrderChanged: (value) async {
+                        setState(() {
+                          _selectedSortOrder = value ?? 'desc';
+                        });
+                        await _loadData();
+                      },
                       onClear: () async {
                         setState(() {
                           _selectedCategory = null;
                           _selectedMonth = null;
                           _selectedYear = null;
+                          _selectedDate = null;
+                          _selectedSortBy = 'date';
+                          _selectedSortOrder = 'desc';
                         });
                         await _loadData();
                       },

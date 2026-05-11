@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/category.dart';
 import '../../models/expense.dart';
@@ -26,10 +27,18 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
   List<StatsByCategoryModel> _categoryStats = [];
   List<StatsByDayModel> _dayStats = [];
   List<StatsByMonthModel> _monthStats = [];
+  StatsByYearModel? _yearStats;
+  StatsByRangeModel? _rangeStats;
 
   String? _selectedCategory;
   int? _selectedMonth;
   int? _selectedYear;
+  DateTime? _selectedDate;
+  String _selectedSortBy = 'date';
+  String _selectedSortOrder = 'desc';
+
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
 
   bool _isLoading = true;
 
@@ -53,6 +62,8 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
     List<StatsByCategoryModel> categoryStats = [];
     List<StatsByDayModel> dayStats = [];
     List<StatsByMonthModel> monthStats = [];
+    StatsByYearModel? yearStats;
+    StatsByRangeModel? rangeStats;
 
     try {
       categories = await _apiService.getCategories();
@@ -61,8 +72,13 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
     try {
       expenses = await _apiService.getExpenses(
         category: _selectedCategory,
-        month: _selectedMonth,
-        year: _selectedYear,
+        month: _selectedDate != null ? null : _selectedMonth,
+        year: _selectedDate != null ? null : _selectedYear,
+        date: _selectedDate != null
+            ? '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}'
+            : null,
+        sortBy: _selectedSortBy,
+        sortOrder: _selectedSortOrder,
       );
     } catch (_) {}
 
@@ -86,6 +102,22 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
       );
     } catch (_) {}
 
+    try {
+      yearStats = await _apiService.getStatsByYear(
+        year: _selectedYear,
+      );
+    } catch (_) {}
+
+    if (_rangeStart != null && _rangeEnd != null) {
+      try {
+        final fmt = DateFormat('yyyy-MM-dd');
+        rangeStats = await _apiService.getStatsByRange(
+          startDate: fmt.format(_rangeStart!),
+          endDate: fmt.format(_rangeEnd!),
+        );
+      } catch (_) {}
+    }
+
     if (!mounted) return;
 
     setState(() {
@@ -94,6 +126,8 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
       _categoryStats = categoryStats;
       _dayStats = dayStats;
       _monthStats = monthStats;
+      _yearStats = yearStats;
+      _rangeStats = rangeStats;
       _isLoading = false;
     });
   }
@@ -117,9 +151,33 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
     }
   }
 
+  Future<void> _pickRangeDate(bool isStart) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isStart ? _rangeStart : _rangeEnd) ?? DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2028),
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      if (isStart) {
+        _rangeStart = picked;
+      } else {
+        _rangeEnd = picked;
+      }
+    });
+
+    if (_rangeStart != null && _rangeEnd != null) {
+      await _loadDashboard();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoryNames = _categories.map((item) => item.name).toList();
+    final formatter = DateFormat('dd MMM yyyy');
 
     return Scaffold(
       body: _isLoading
@@ -183,6 +241,9 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                                       selectedMonth: _selectedMonth,
                                       selectedYear: _selectedYear,
                                       categories: categoryNames,
+                                      selectedDate: _selectedDate,
+                                      selectedSortBy: _selectedSortBy,
+                                      selectedSortOrder: _selectedSortOrder,
                                       onCategoryChanged: (value) async {
                                         setState(() {
                                           _selectedCategory = value;
@@ -201,11 +262,32 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                                         });
                                         await _loadDashboard();
                                       },
+                                      onDateChanged: (value) async {
+                                        setState(() {
+                                          _selectedDate = value;
+                                        });
+                                        await _loadDashboard();
+                                      },
+                                      onSortByChanged: (value) async {
+                                        setState(() {
+                                          _selectedSortBy = value ?? 'date';
+                                        });
+                                        await _loadDashboard();
+                                      },
+                                      onSortOrderChanged: (value) async {
+                                        setState(() {
+                                          _selectedSortOrder = value ?? 'desc';
+                                        });
+                                        await _loadDashboard();
+                                      },
                                       onClear: () async {
                                         setState(() {
                                           _selectedCategory = null;
                                           _selectedMonth = null;
                                           _selectedYear = null;
+                                          _selectedDate = null;
+                                          _selectedSortBy = 'date';
+                                          _selectedSortOrder = 'desc';
                                         });
                                         await _loadDashboard();
                                       },
@@ -249,11 +331,78 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                                   ),
                                   const SizedBox(height: 20),
                                   AppSectionCard(
+                                    title: 'Date Range Stats',
+                                    child: Column(
+                                      children: [
+                                        Wrap(
+                                          spacing: 12,
+                                          runSpacing: 12,
+                                          children: [
+                                            SizedBox(
+                                              width: 160,
+                                              child: InkWell(
+                                                onTap: () =>
+                                                    _pickRangeDate(true),
+                                                child: InputDecorator(
+                                                  decoration:
+                                                      const InputDecoration(
+                                                    labelText: 'Start Date',
+                                                  ),
+                                                  child: Text(
+                                                    _rangeStart != null
+                                                        ? formatter.format(
+                                                            _rangeStart!)
+                                                        : 'Select',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 160,
+                                              child: InkWell(
+                                                onTap: () =>
+                                                    _pickRangeDate(false),
+                                                child: InputDecorator(
+                                                  decoration:
+                                                      const InputDecoration(
+                                                    labelText: 'End Date',
+                                                  ),
+                                                  child: Text(
+                                                    _rangeEnd != null
+                                                        ? formatter.format(
+                                                            _rangeEnd!)
+                                                        : 'Select',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            if (_rangeStart != null ||
+                                                _rangeEnd != null)
+                                              OutlinedButton(
+                                                onPressed: () async {
+                                                  setState(() {
+                                                    _rangeStart = null;
+                                                    _rangeEnd = null;
+                                                    _rangeStats = null;
+                                                  });
+                                                },
+                                                child:
+                                                    const Text('Clear Range'),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  AppSectionCard(
                                     title: 'Statistics',
                                     child: StatsPanel(
                                       categoryStats: _categoryStats,
                                       dayStats: _dayStats,
                                       monthStats: _monthStats,
+                                      yearStats: _yearStats,
+                                      rangeStats: _rangeStats,
                                     ),
                                   ),
                                 ],

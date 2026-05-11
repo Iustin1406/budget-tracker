@@ -7,12 +7,16 @@ class StatsPanel extends StatelessWidget {
   final List<StatsByCategoryModel> categoryStats;
   final List<StatsByDayModel> dayStats;
   final List<StatsByMonthModel> monthStats;
+  final StatsByYearModel? yearStats;
+  final StatsByRangeModel? rangeStats;
 
   const StatsPanel({
     super.key,
     required this.categoryStats,
     required this.dayStats,
     required this.monthStats,
+    this.yearStats,
+    this.rangeStats,
   });
 
   Widget _sectionTitle(String title) {
@@ -106,6 +110,34 @@ class StatsPanel extends StatelessWidget {
               '${item.total.toStringAsFixed(2)} RON',
             ),
           ),
+        if (yearStats != null) ...[
+          const SizedBox(height: 18),
+          _sectionTitle('By Year (${yearStats!.year})'),
+          if (yearStats!.stats.isEmpty)
+            _empty()
+          else
+            ...yearStats!.stats.map(
+              (item) => _row(
+                item.category,
+                '${item.total.toStringAsFixed(2)} RON',
+              ),
+            ),
+        ],
+        if (rangeStats != null) ...[
+          const SizedBox(height: 18),
+          _sectionTitle(
+            'By Range (${formatter.format(rangeStats!.startDate)} - ${formatter.format(rangeStats!.endDate)})',
+          ),
+          if (rangeStats!.stats.isEmpty)
+            _empty()
+          else
+            ...rangeStats!.stats.map(
+              (item) => _row(
+                item.category,
+                '${item.total.toStringAsFixed(2)} RON',
+              ),
+            ),
+        ],
       ],
     );
   }

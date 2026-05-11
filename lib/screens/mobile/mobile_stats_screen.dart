@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/stats.dart';
 import '../../services/api_service.dart';
@@ -18,10 +19,15 @@ class _MobileStatsScreenState extends State<MobileStatsScreen> {
   List<StatsByCategoryModel> _categoryStats = [];
   List<StatsByDayModel> _dayStats = [];
   List<StatsByMonthModel> _monthStats = [];
+  StatsByYearModel? _yearStats;
+  StatsByRangeModel? _rangeStats;
 
   bool _isLoading = true;
   int? _selectedMonth;
   int _selectedYear = 2026;
+
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
 
   @override
   void initState() {
@@ -37,6 +43,8 @@ class _MobileStatsScreenState extends State<MobileStatsScreen> {
     List<StatsByCategoryModel> byCategory = [];
     List<StatsByDayModel> byDay = [];
     List<StatsByMonthModel> byMonth = [];
+    StatsByYearModel? byYear;
+    StatsByRangeModel? byRange;
 
     try {
       byCategory = await _apiService.getStatsByCategory(
@@ -58,19 +66,61 @@ class _MobileStatsScreenState extends State<MobileStatsScreen> {
       );
     } catch (_) {}
 
+    try {
+      byYear = await _apiService.getStatsByYear(
+        year: _selectedYear,
+      );
+    } catch (_) {}
+
+    if (_rangeStart != null && _rangeEnd != null) {
+      try {
+        final fmt = DateFormat('yyyy-MM-dd');
+        byRange = await _apiService.getStatsByRange(
+          startDate: fmt.format(_rangeStart!),
+          endDate: fmt.format(_rangeEnd!),
+        );
+      } catch (_) {}
+    }
+
     if (!mounted) return;
 
     setState(() {
       _categoryStats = byCategory;
       _dayStats = byDay;
       _monthStats = byMonth;
+      _yearStats = byYear;
+      _rangeStats = byRange;
       _isLoading = false;
     });
+  }
+
+  Future<void> _pickRangeDate(bool isStart) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isStart ? _rangeStart : _rangeEnd) ?? DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2028),
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      if (isStart) {
+        _rangeStart = picked;
+      } else {
+        _rangeEnd = picked;
+      }
+    });
+
+    if (_rangeStart != null && _rangeEnd != null) {
+      await _loadStats();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final months = List.generate(12, (index) => index + 1);
+    final formatter = DateFormat('dd MMM yyyy');
 
     return Scaffold(
       appBar: AppBar(
@@ -139,11 +189,66 @@ class _MobileStatsScreenState extends State<MobileStatsScreen> {
                 ),
                 const SizedBox(height: 16),
                 AppSectionCard(
+                  title: 'Date Range',
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: 170,
+                        child: InkWell(
+                          onTap: () => _pickRangeDate(true),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Start Date',
+                            ),
+                            child: Text(
+                              _rangeStart != null
+                                  ? formatter.format(_rangeStart!)
+                                  : 'Select',
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 170,
+                        child: InkWell(
+                          onTap: () => _pickRangeDate(false),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'End Date',
+                            ),
+                            child: Text(
+                              _rangeEnd != null
+                                  ? formatter.format(_rangeEnd!)
+                                  : 'Select',
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_rangeStart != null || _rangeEnd != null)
+                        OutlinedButton(
+                          onPressed: () async {
+                            setState(() {
+                              _rangeStart = null;
+                              _rangeEnd = null;
+                              _rangeStats = null;
+                            });
+                          },
+                          child: const Text('Clear Range'),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppSectionCard(
                   title: 'Statistics Overview',
                   child: StatsPanel(
                     categoryStats: _categoryStats,
                     dayStats: _dayStats,
                     monthStats: _monthStats,
+                    yearStats: _yearStats,
+                    rangeStats: _rangeStats,
                   ),
                 ),
               ],
